@@ -1,7 +1,10 @@
+/// <reference path="../typings/modules/lodash/index.d.ts" />
+
 import * as _ from '../node_modules/lodash'
 import {sync, urlError, wrapError} from './functions';
+import {Event} from './event';
 
-export class Entity {
+export class Entity extends Event {
     // A hash of attributes whose current and previous value differ.
     public changed = null;
     public id: number;
@@ -11,16 +14,16 @@ export class Entity {
     // The default name for the JSON `id` attribute is `"id"`. MongoDB and
     // CouchDB users may want to set this to `"_id"`.
     public idAttribute = 'id';
+    public cid;
+    public attributes;
+    public collection;
 
     // The prefix is used to create the client id which is used to identify models locally.
     // You may want to override this if you're experiencing name clashes with model ids.
     protected cidPrefix = 'c';
-    public cid;
     private _previousAttributes;
     private _changing;
     private _pending;
-    public attributes;
-    public collection;
 
     constructor(attributes, options) {
         var attrs = attributes || {};
@@ -32,7 +35,25 @@ export class Entity {
         if (options.parse) attrs = this.parse(attrs, options) || {};
         var defaults = _.result(this, 'defaults');
         attrs = _.defaults(_.extend({}, defaults, attrs), defaults);
-        this.set(attrs, options);
+
+        for (var key in attrs) {
+            var value = attrs[key];
+
+            ((k: any) => {
+                Object.defineProperty(this, k, {
+                    get: (): typeof value => {
+                        return this.get(k);
+                    },
+                    set: (value: any) => {
+                        this.set(k, value, options);
+                    },
+                    enumerable: true,
+                    configurable: true
+                });
+            })(key);
+        }
+
+        //this.set(attrs, options);
         this.changed = {};
         this.initialize.apply(this, arguments);
     }
@@ -124,6 +145,7 @@ export class Entity {
             } else {
                 delete changed[attr];
             }
+
             unset ? delete current[attr] : current[attr] = val;
         }
 

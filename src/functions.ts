@@ -1,3 +1,20 @@
+/// <reference path="../typings/modules/lodash/index.d.ts" />
+
+// Support `collection.sortBy('attr')` and `collection.findWhere({id: 1})`.
+function cb(iteratee, instance) {
+    if (_.isFunction(iteratee)) return iteratee;
+    if (_.isObject(iteratee) && !instance._isModel(iteratee)) return modelMatcher(iteratee);
+    if (_.isString(iteratee)) return function(model) { return model.get(iteratee); };
+    return iteratee;
+}
+
+function modelMatcher(attrs) {
+    var matcher = _.matches(attrs);
+    return function(model) {
+        return matcher(model.attributes);
+    };
+}
+
 function addMethod(length: number, method, attribute) {
     switch (length) {
         case 1: return function() {
@@ -20,7 +37,7 @@ function addMethod(length: number, method, attribute) {
     }
 }
 
-export function addUnderscoreMethods(Class: Object, methods:, attribute) {
+export function addUnderscoreMethods(Class, methods, attribute) {
     _.each(methods, function(length, method) {
         if (_[method]) Class.prototype[method] = addMethod(length, method, attribute);
     });
@@ -89,3 +106,6 @@ export function wrapError(model, options) {
         model.trigger('error', model, resp, options);
     };
 }
+
+
+

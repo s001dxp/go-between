@@ -1,4 +1,6 @@
+/// <reference path="../typings/modules/lodash/index.d.ts" />
 import {Entity} from './entity';
+import {Event} from './event';
 import {addUnderscoreMethods, sync, wrapError} from './functions';
 
 interface SortBy {
@@ -9,7 +11,7 @@ interface Sort {
     n: (n: Entity, o: Entity) => number;
 }
 
-export class Repository {
+export class Repository extends Event {
     // Default options for `Repository#set`.
     private setOptions = {add: true, remove: true, merge: true};
     private addOptions = {add: true, remove: false};
@@ -416,7 +418,7 @@ export class Repository {
     // Method for checking whether an object should be considered a model for
     // the purposes of adding to the collection.
     private _isModel(model) {
-        return model instanceof Model;
+        return model instanceof Entity;
     }
 
     // Internal method to create a model's ties to a collection.
