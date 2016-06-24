@@ -1,4 +1,6 @@
 /// <reference path="../typings/modules/lodash/index.d.ts" />
+import {Http, XHRBackend, BaseRequestOptions} from  '@angular/http';
+import {Observable} from 'rxjs/Observable';
 
 // Support `collection.sortBy('attr')` and `collection.findWhere({id: 1})`.
 function cb(iteratee, instance) {
@@ -90,7 +92,9 @@ export function sync(method, model, options) {
 // Set the default implementation of `Backbone.ajax` to proxy through to `$`.
 // Override this if you'd like to use a different library.
 export function ajax() {
-    return Backbone.$.ajax.apply(Backbone.$, arguments);
+    let ob = new Http(new XHRBackend(), BaseRequestOptions());
+
+    return ob;
 }
 
 // Throw an error when a URL is needed, and none is supplied.
