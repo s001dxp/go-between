@@ -1,4 +1,5 @@
 import * as _ from '../node_modules/lodash'
+import {sync, urlError, wrapError} from './functions';
 
 export class Entity {
     // A hash of attributes whose current and previous value differ.
@@ -14,7 +15,7 @@ export class Entity {
     // The prefix is used to create the client id which is used to identify models locally.
     // You may want to override this if you're experiencing name clashes with model ids.
     protected cidPrefix = 'c';
-    private cid;
+    public cid;
     private _previousAttributes;
     private _changing;
     private _pending;
@@ -54,7 +55,7 @@ export class Entity {
     // Proxy `Backbone.sync` by default -- but override this if you need
     // custom syncing semantics for *this* particular model.
     sync() {
-        return Backbone.sync.apply(this, arguments);
+        return sync.apply(this, arguments);
     }
 
     // Get the value of an attribute.
@@ -339,6 +340,10 @@ export class Entity {
     // Check if the model is currently in a valid state.
     isValid(options) {
         return this._validate({}, _.extend({}, options, {validate: true}));
+    }
+
+    validate(attrs, options){
+        return true;
     }
 
     // Run validation against the next complete set of model attributes,

@@ -1,7 +1,22 @@
+import {Entity} from './entity';
+import {addUnderscoreMethods, sync, wrapError} from './functions';
+
+interface SortBy {
+    n: (n: Entity) => number | string;
+}
+
+interface Sort {
+    n: (n: Entity, o: Entity) => number;
+}
+
 export class Repository {
     // Default options for `Repository#set`.
     private setOptions = {add: true, remove: true, merge: true};
     private addOptions = {add: true, remove: false};
+    private comparator: SortBy | Sort | string;
+    public length = 0;
+    private _byId = {};
+    public models : Entity[];
 
     constructor(models, options) {
         options || (options = {});
@@ -27,7 +42,7 @@ export class Repository {
 
     // The default model for a collection is just a **Backbone.Model**.
     // This should be overridden in most cases.
-    private model = Model;
+    private model = Entity;
 
 
     // preinitialize is an empty function by default. You can override it with a function
@@ -48,16 +63,15 @@ export class Repository {
         });
     }
 
-    // Proxy `Backbone.sync` by default.
     sync() {
-        return Backbone.sync.apply(this, arguments);
+        return sync.apply(this, arguments);
     }
 
     // Add a model, or list of models to the set. `models` may be Backbone
     // Models or raw JavaScript objects to be converted to Models, or any
     // combination of the two.
     add(models, options) {
-        return this.set(models, _.extend({merge: false}, options, addOptions));
+        return this.set(models, _.extend({merge: false}, options, this.addOptions));
     }
 
     // Remove a model, or a list of models from the set.
@@ -80,7 +94,7 @@ export class Repository {
     set(models, options) {
         if (models == null) return;
 
-        options = _.extend({}, setOptions, options);
+        options = _.extend({}, this.setOptions, options);
         if (options.parse && !this._isModel(models)) {
             models = this.parse(models, options) || [];
         }
@@ -159,11 +173,11 @@ export class Repository {
                     return m !== set[index];
                 });
             this.models.length = 0;
-            splice(this.models, set, 0);
+            this.splice(this.models, set, 0);
             this.length = this.models.length;
         } else if (toAdd.length) {
             if (sortable) sort = true;
-            splice(this.models, toAdd, at == null ? this.length : at);
+            this.splice(this.models, toAdd, at == null ? this.length : at);
             this.length = this.models.length;
         }
 
@@ -210,13 +224,8 @@ export class Repository {
 
     // Add a model to the end of the collection.
     push(model, options) {
-        return this.add(model, _.extend({at: this.length}
-        options
-    ))
-        ;
+        return this.add(model, _.extend({at: this.length}, options));
     }
-
-,
 
     // Remove a model from the end of the collection.
     pop(options) {
@@ -224,17 +233,10 @@ export class Repository {
         return this.remove(model, options);
     }
 
-,
-
     // Add a model to the beginning of the collection.
-    unshift(model, options) {
-        return this.add(model, _.extend({at: 0}
-        options
-    ))
-        ;
+    unshift(model: Entity, options) {
+        return this.add(model, _.extend({at: 0}, options));
     }
-
-,
 
     // Remove a model from the beginning of the collection.
     shift(options) {
@@ -242,56 +244,42 @@ export class Repository {
         return this.remove(model, options);
     }
 
-,
-
     // Slice out a sub-array of models from the collection.
     slice() {
-        return slice.apply(this.models, arguments);
+        return this.slice.apply(this.models, arguments);
     }
-
-,
 
     // Get a model from the set by id, cid, model object with id or cid
     // properties, or an attributes object that is transformed through modelId.
-    get(obj) {
+    get(obj: Entity) {
         if (obj == null) return void 0;
         return this._byId[obj] ||
             this._byId[this.modelId(obj.attributes || obj)] ||
             obj.cid && this._byId[obj.cid];
     }
 
-,
-
     // Returns `true` if the model is in the collection.
-    has(obj) {
+    has(obj: Entity) {
         return this.get(obj) != null;
     }
 
-,
-
     // Get the model at the given index.
-    at(index) {
+    at(index: number) {
         if (index < 0) index += this.length;
         return this.models[index];
     }
 
-,
-
     // Return models with matching attributes. Useful for simple cases of
     // `filter`.
-    where(attrs, first) {
+    where(attrs: Object, first?: boolean) {
         return this[first ? 'find' : 'filter'](attrs);
     }
 
-,
-
     // Return the first model with matching attributes. Useful for simple cases
     // of `find`.
-    findWhere(attrs) {
+    findWhere(attrs: Object) {
         return this.where(attrs, true);
     }
-
-,
 
     // Force the collection to re-sort itself. You don't need to call this under
     // normal circumstances, as the set will maintain sort order as each item
@@ -370,7 +358,7 @@ export class Repository {
     }
 
     // Define how to uniquely identify models in the collection.
-    modelId(attrs) {
+    modelId(attrs: Object) {
         return attrs[this.model.prototype.idAttribute || 'id'];
     }
 
@@ -468,4 +456,19 @@ export class Repository {
         this.trigger.apply(this, arguments);
     }
 }
+
+// Underscore methods that we want to implement on the Collection.
+// 90% of the core usefulness of Backbone Collections is actually implemented
+// right here:
+let collectionMethods = { forEach: 3, each: 3, map: 3, collect: 3, reduce: 4,
+    foldl: 4, inject: 4, reduceRight: 4, foldr: 4, find: 3, detect: 3, filter: 3,
+    select: 3, reject: 3, every: 3, all: 3, some: 3, any: 3, include: 3, includes: 3,
+    contains: 3, invoke: 0, max: 3, min: 3, toArray: 1, size: 1, first: 3,
+    head: 3, take: 3, initial: 3, rest: 3, tail: 3, drop: 3, last: 3,
+    without: 0, difference: 0, indexOf: 3, shuffle: 1, lastIndexOf: 3,
+    isEmpty: 1, chain: 1, sample: 3, partition: 3, groupBy: 3, countBy: 3,
+    sortBy: 3, indexBy: 3};
+
+// Mix in each Underscore method as a proxy to `Collection#models`.
+addUnderscoreMethods(Repository, collectionMethods, 'models');
     
