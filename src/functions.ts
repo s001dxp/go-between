@@ -1,6 +1,10 @@
 /// <reference path="../typings/modules/lodash/index.d.ts" />
-import {Http, XHRBackend, BaseRequestOptions} from  '@angular/http';
+import {
+    Http, XHRBackend, BaseRequestOptions, ConnectionBackend,
+    Headers
+} from  '@angular/http';
 import {Observable} from 'rxjs/Observable';
+import {ReflectiveInjector} from "@angular/core";
 
 // Support `collection.sortBy('attr')` and `collection.findWhere({id: 1})`.
 function cb(iteratee, instance) {
@@ -59,22 +63,22 @@ export function sync(method, model, options) {
     var type = methodMap[method];
 
     // Default JSON-request options.
-    var params = {type: type, dataType: 'json'};
+    var params = {method: type};
 
     // Ensure that we have a URL.
     if (!options.url) {
         params['url'] = _.result(model, 'url') || urlError();
     }
 
+    if(options.data)
+    {
+        params['body'] = options.data;
+    }
+
     // Ensure that we have the appropriate request data.
     if (options.data == null && model && (method === 'create' || method === 'update' || method === 'patch')) {
         params['contentType'] = 'application/json';
-        params['data'] = JSON.stringify(options.attrs || model.toJSON(options));
-    }
-
-    // Don't process data on a non-GET request.
-    if (params.type !== 'GET' && !options.emulateJSON) {
-        params['processData'] = false;
+        params['body'] = JSON.stringify(options.attrs || model.toJSON(options));
     }
 
     // Pass along `textStatus` and `errorThrown` from jQuery.
@@ -89,13 +93,33 @@ export function sync(method, model, options) {
     return ajax(_.extend(params, options));
 }
 
+let http: Http = null;
 // Set the default implementation of `Backbone.ajax` to proxy through to `$`.
 // Override this if you'd like to use a different library.
-export function ajax() {
-    let ob = new Http(new XHRBackend(), BaseRequestOptions());
+export function ajax(params: Object): Observable {
+    if (null === http)
+    {
+        let injector = ReflectiveInjector.resolveAndCreate([
+            BaseRequestOptions, XHRBackend, {
+                provide: Http,
+                useFactory: function(backend: ConnectionBackend, defaultOptions: BaseRequestOptions) {
+                    return new Http(backend, defaultOptions);
+                },
+                deps: [XHRBackend, BaseRequestOptions]
+            }
+        ]);
 
-    return ob;
+        http = injector.get(Http);
+    }
+
+    let url = params['url'];
+    delete params['url'];
+    var headers = new Headers();
+    headers.append('Content-Type', params['contentType']);
+    params['headers'] = headers;
+    return http.request(url, params);
 }
+
 
 // Throw an error when a URL is needed, and none is supplied.
 export function urlError() {
