@@ -90,13 +90,13 @@ export function sync(method, model, options) {
     };
 
     // Make the request, allowing the user to override any Ajax options.
-    return ajax(_.extend(params, options));
+    return ajax(_.extend(params, options), model);
 }
 
 let http: Http = null;
 // Set the default implementation of `Backbone.ajax` to proxy through to `$`.
 // Override this if you'd like to use a different library.
-export function ajax(params: Object): Observable {
+export function ajax(params: Object, context: any): Observable {
     if (null === http)
     {
         let injector = ReflectiveInjector.resolveAndCreate([
@@ -117,7 +117,13 @@ export function ajax(params: Object): Observable {
     var headers = new Headers();
     headers.append('Content-Type', params['contentType']);
     params['headers'] = headers;
-    return http.request(url, params);
+    http.request(url, params)
+        .subscribe((res) => {
+            params.success.call(context, res);
+        },
+        (error) => {
+            console.log(error);
+        });
 }
 
 
