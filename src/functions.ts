@@ -96,7 +96,7 @@ export function sync(method, model, options) {
 let http: Http = null;
 // Set the default implementation of `Backbone.ajax` to proxy through to `$`.
 // Override this if you'd like to use a different library.
-export function ajax(params: Object, context: any): Observable {
+export function ajax(params: Object, context: any) {
     if (null === http)
     {
         let injector = ReflectiveInjector.resolveAndCreate([
