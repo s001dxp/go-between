@@ -1,7 +1,7 @@
 {
   "name": "go-between",
   "version": "0.0.1",
-  "description": "This is a project that aims to be the communication layer between a signle page web application and a restful web service. ",
+  "description": "This is a project that aims to be the communication layer between a single page web application and a restful web service. ",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
