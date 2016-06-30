@@ -1,6 +1,6 @@
 {
   "name": "go-between",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "This is a project that aims to be the communication layer between a single page web application and a restful web service. ",
   "main": "index.js",
   "scripts": {
